@@ -1,0 +1,72 @@
+import torch
+from pytorch_lightning import Trainer
+from torch.utils.data import DataLoader
+import os
+from utils import ECGDataset, EffNet, ECGModel
+import pandas as pd
+from sklearn import metrics
+import argparse
+
+
+if __name__ == '__main__':
+    if os.name == 'nt':
+        os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "gloo"
+        print('Windows detected!')
+
+parser = argparse.ArgumentParser(description='Run inference on a trained model: either LVEF or amyloid')
+parser.add_argument('--task', type=str, choices = ['EF','amyloid'], help='Task to run inference on. Choose either amyloid or EF')
+parser.add_argument('--label_col', type=str, help='Name of ground truth label column in manifest; drops cases with NaN ground truth')
+parser.add_argument('--split', type=str, choices = ['train','val','test','None'], help = 'Split to run inference on. None, will run inference on all splits')
+parser.add_argument('--manifest_path', type=str, help='Path to Manifest File')
+parser.add_argument('--data_path', type=str, help='Path to Normalized EKGs')
+parser.add_argument('--save_predictions_path', type=str, default='./')
+args = parser.parse_args()
+
+
+if args.split == 'None':
+    args.split = None
+
+data_path = args.data_path
+manifest_path = args.manifest_path
+
+test_ds = ECGDataset(split=args.split,
+                    data_path=data_path, manifest_path=manifest_path, labels=[args.label_col])
+
+test_dl = DataLoader(test_ds, num_workers=24, batch_size=500, drop_last=False, shuffle=False)
+backbone = EffNet(output_neurons=1)
+model = ECGModel(backbone, save_predictions_path=args.save_predictions_path)
+
+if args.task == 'EF':
+    weights_path = 'lvef_31_days_model_weights.pt'
+    print(model.load_state_dict(torch.load(weights_path)))
+    trainer = Trainer(gpus=1)
+    trainer.predict(model, dataloaders=test_dl)
+    os.rename('dataloader_0_predictions.csv', 'EF_predictions.csv')
+    predictions = pd.read_csv('EF_predictions.csv')
+    stdev = 16.283926568588136
+    mean = 55.55226219042883
+    predictions['EF_preds'] = (predictions['preds']*stdev) + mean
+    predictions.to_csv('EF_predictions.csv', index = False)
+
+else:
+    weights_path = 'amyloid_model_weights_kai.pt'
+    print(backbone.load_state_dict(torch.load(weights_path)))
+    trainer = Trainer(gpus=1)
+    trainer.predict(model, dataloaders=test_dl)
+    os.rename('dataloader_0_predictions.csv', 'amyloid_predictions_kai.csv')
+    predictions = pd.read_csv('amyloid_predictions_kai.csv')
+    fpr, tpr, threshold = metrics.roc_curve(predictions.amyloid, predictions.preds)
+    kai_auc = metrics.auc(fpr,tpr)
+    
+    
+    weights_path = 'amyloid_model_weights_amey.pt'
+    print(model.load_state_dict(torch.load(weights_path)))
+    trainer = Trainer(gpus=1)
+    trainer.predict(model, dataloaders=test_dl)
+    os.rename('dataloader_0_predictions.csv', 'amyloid_predictions_amey.csv')
+    predictions = pd.read_csv('amyloid_predictions_amey.csv')
+    fpr, tpr, threshold = metrics.roc_curve(predictions.amyloid, predictions.preds)
+    amey_auc = metrics.auc(fpr,tpr)
+    
+    print('Amyloid (Kai Weights) AUC:' + str(kai_auc))
+    print('Amyloid (Amey Weights) AUC:' + str(amey_auc))
