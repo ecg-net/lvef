@@ -1,4 +1,4 @@
-# lvef_and_amyloid_ekg_external_validation
+# LVEF_ekg_external_validation
 
 # Directions For Running Inference
 
