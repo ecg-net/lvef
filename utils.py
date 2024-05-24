@@ -11,11 +11,83 @@ import torch.nn as nn
 from torch import Tensor, nn
 from torch.utils.data import Dataset
 import math
+from sklearn import metrics
+from tqdm import tqdm
+import random
 
+youden = 0.07800596181964313
 
 def sigmoid(x):
     y = 1/(1+math.exp(-1*x))
     return(y)
+
+
+
+def bootstrap(x,y, opt_threshold):
+    y_total, yhat_total = x,y # y_total is ground truth, while yhat_total is prediction
+    fpr_boot = []
+    tpr_boot = []
+    aucs = []
+    sensitivity = []
+    specificity = []
+    ppv = []
+    npv = []
+    num_pos = []
+    # bootstrap for confidence interval
+    for i in tqdm(range(0,10000)):
+        
+        choices = list(yhat_total.sample(frac = 0.5).index)
+                
+        ground_sample = y_total[choices]
+        preds_sample = yhat_total[choices]
+        
+        fpr,tpr, _ = metrics.roc_curve(ground_sample, preds_sample)
+        fpr_boot.append(fpr)
+        tpr_boot.append(tpr)
+        aucs.append(metrics.auc(fpr,tpr))
+        tp = len(ground_sample[(ground_sample == 1) & (preds_sample > opt_threshold)])
+        fp = len(ground_sample[(ground_sample == 0) & (preds_sample > opt_threshold)])
+        tn = len(ground_sample[(ground_sample == 0) & (preds_sample < opt_threshold)])
+        fn = len(ground_sample[(ground_sample == 1) & (preds_sample < opt_threshold)])
+        num_positives = len(ground_sample[(preds_sample > opt_threshold)])
+        sensitivity.append(tp/(tp+fn))
+        specificity.append(tn/(tn+fp))
+        ppv.append(tp/(tp+fp))
+        npv.append(tn/(tn+fn))
+        num_pos.append(num_positives)
+
+    np.array(aucs)
+    np.array(ppv)
+    np.array(npv)
+    np.array(sensitivity)
+    np.array(specificity)
+    np.array(num_pos)
+    
+    fpr,tpr, _ = metrics.roc_curve(y_total, yhat_total)
+    tp = len(y_total[(y_total == 1) & (yhat_total > opt_threshold)])
+    fp = len(y_total[(y_total == 0) & (yhat_total > opt_threshold)])
+    tn = len(y_total[(y_total == 0) & (yhat_total < opt_threshold)])
+    fn = len(y_total[(y_total == 1) & (yhat_total < opt_threshold)])
+    sensitivity_full = (tp/(tp+fn))
+    specificity_full = (tn/(tn+fp))
+    ppv_full = (tp/(tp+fp))
+    npv_full = (tn/(tn+fn))
+
+    auc_boot = [round(np.percentile(aucs,2.5),6), round(np.percentile(aucs,97.5),6)]
+    sensitivity_boot = [round(np.percentile(sensitivity,2.5),3), round(np.percentile(sensitivity,97.5),3)]
+    specificity_boot = [round(np.percentile(specificity,2.5),3), round(np.percentile(specificity,97.5),3)]
+    ppv_boot = [round(np.percentile(ppv,2.5),3), round(np.percentile(ppv,97.5),3)]
+    npv_boot = [round(np.percentile(npv,2.5),3), round(np.percentile(npv,97.5),3)]
+    num_positives = [round(np.percentile(num_pos,2.5),3), round(np.percentile(num_pos,97.5),3)]
+    
+    
+    print("auc:" + str(auc_boot))
+    print("sensitivity:" + str(sensitivity_boot))
+    print("specificity:" + str(specificity_boot))
+    print("ppv:" + str(ppv_boot))
+    print("npv:" + str(npv_boot))
+    print("Number of Positives" + str(num_positives))
+    return(auc_boot, ppv_boot)
 
 class EffNet(nn.Module):
 
