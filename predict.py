@@ -44,7 +44,7 @@ predictions = pd.read_csv('EF_predictions_regression.csv')
 stdev = 16.283926568588136
 mean = 55.55226219042883
 predictions['EF_preds'] = (predictions['preds']*stdev) + mean
-predictions = predictions.rename(cols = {str(args.label_col):'EF_2D'})
+predictions = predictions.rename(columns = {str(args.label_col):'EF_2D'})
 predictions.to_csv('EF_predictions_regression.csv', index = False)
 
 weights_path = 'EF_binary_35.pt'
@@ -54,5 +54,9 @@ trainer.predict(model, dataloaders=test_dl)
 os.rename('dataloader_0_predictions.csv', 'EF_predictions_classification.csv')
 predictions = pd.read_csv('EF_predictions_classification.csv')
 predictions.preds = predictions.preds.apply(sigmoid)
-predictions = predictions.rename(cols = {str(args.label_col):'EF_2D'})
+predictions = predictions.rename(columns = {str(args.label_col):'EF_2D'})
 predictions.to_csv('EF_predictions_classification.csv', index = False)
+
+
+# python predict.py --label_col EF_2D --split test --manifest_path /workspace/Amey/wandb_runs_and_manifests/wandb_runs/lvef_ekg_wandb/lvef_31_days_stride8_dilation2/data/ekg_w_ef_31_days.csv --data_path /workspace/data/drives/sdc/Amey/ekgs/ecg_npy_denoise_wbr_norm_2023_01_13
+
