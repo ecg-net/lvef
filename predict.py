@@ -36,37 +36,24 @@ test_dl = DataLoader(test_ds, num_workers=24, batch_size=500, drop_last=False, s
 backbone = EffNet(output_neurons=1)
 model = ECGModel(backbone, save_predictions_path=args.save_predictions_path)
 
-if args.task == 'EF':
-    weights_path = 'lvef_31_days_model_weights.pt'
-    print(model.load_state_dict(torch.load(weights_path)))
-    trainer = Trainer(gpus=1)
-    trainer.predict(model, dataloaders=test_dl)
-    os.rename('dataloader_0_predictions.csv', 'EF_predictions.csv')
-    predictions = pd.read_csv('EF_predictions.csv')
-    stdev = 16.283926568588136
-    mean = 55.55226219042883
-    predictions['EF_preds'] = (predictions['preds']*stdev) + mean
-    predictions.to_csv('EF_predictions.csv', index = False)
+weights_path = 'lvef_regression.pt'
+print(model.load_state_dict(torch.load(weights_path)))
+trainer = Trainer(gpus=1)
+trainer.predict(model, dataloaders=test_dl)
+os.rename('dataloader_0_predictions.csv', 'EF_predictions.csv')
+predictions = pd.read_csv('EF_predictions.csv')
+stdev = 16.283926568588136
+mean = 55.55226219042883
+predictions['EF_preds'] = (predictions['preds']*stdev) + mean
+predictions.to_csv('EF_predictions_regression.csv', index = False)
 
-else:
-    weights_path = 'amyloid_model_weights_kai.pt'
-    print(backbone.load_state_dict(torch.load(weights_path)))
-    trainer = Trainer(gpus=1)
-    trainer.predict(model, dataloaders=test_dl)
-    os.rename('dataloader_0_predictions.csv', 'amyloid_predictions_kai.csv')
-    predictions = pd.read_csv('amyloid_predictions_kai.csv')
-    fpr, tpr, threshold = metrics.roc_curve(predictions.amyloid, predictions.preds)
-    kai_auc = metrics.auc(fpr,tpr)
-    
-    
-    weights_path = 'amyloid_model_weights_amey.pt'
-    print(model.load_state_dict(torch.load(weights_path)))
-    trainer = Trainer(gpus=1)
-    trainer.predict(model, dataloaders=test_dl)
-    os.rename('dataloader_0_predictions.csv', 'amyloid_predictions_amey.csv')
-    predictions = pd.read_csv('amyloid_predictions_amey.csv')
-    fpr, tpr, threshold = metrics.roc_curve(predictions.amyloid, predictions.preds)
-    amey_auc = metrics.auc(fpr,tpr)
-    
-    print('Amyloid (Kai Weights) AUC:' + str(kai_auc))
-    print('Amyloid (Amey Weights) AUC:' + str(amey_auc))
+weights_path = 'EF_binary_35.pt'
+print(model.load_state_dict(torch.load(weights_path)))
+trainer = Trainer(gpus=1)
+trainer.predict(model, dataloaders=test_dl)
+os.rename('dataloader_0_predictions.csv', 'EF_predictions.csv')
+predictions = pd.read_csv('EF_predictions.csv')
+stdev = 16.283926568588136
+mean = 55.55226219042883
+predictions['EF_preds'] = (predictions['preds']*stdev) + mean
+predictions.to_csv('EF_predictions_regression.csv', index = False)

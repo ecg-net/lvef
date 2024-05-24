@@ -10,7 +10,12 @@ import torch
 import torch.nn as nn
 from torch import Tensor, nn
 from torch.utils.data import Dataset
+import math
 
+
+def sigmoid(x):
+    y = 1/(1+math.exp(-1*x))
+    return(y)
 
 class EffNet(nn.Module):
 
