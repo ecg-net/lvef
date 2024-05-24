@@ -15,15 +15,15 @@ from sklearn import metrics
 from tqdm import tqdm
 import random
 
-youden = 0.07800596181964313
 
 def sigmoid(x):
     y = 1/(1+math.exp(-1*x))
     return(y)
 
 
-
 def bootstrap(x,y, opt_threshold):
+    youden = 0.07800596181964313
+    opt_threshold = youden
     y_total, yhat_total = x,y # y_total is ground truth, while yhat_total is prediction
     fpr_boot = []
     tpr_boot = []
@@ -88,8 +88,6 @@ def bootstrap(x,y, opt_threshold):
     print("ppv:",round(ppv_full,3),str(ppv_boot))
     print("npv:",round(npv_full,3),str(npv_boot))
     # print("Number of Positives" + str(num_positives))
-    return(auc_boot, ppv_boot)
-
 
 def bootstrap_reg_new(manifest, threshold):
     tp = len(manifest[(manifest.EF_2D < threshold) & (manifest.EF_preds < threshold)])
@@ -123,13 +121,13 @@ def bootstrap_reg_new(manifest, threshold):
         ppv_list.append(tp/(tp+fp))
         npv_list.append(tn/(tn+fn))
 
-    auc_boot = [round(np.percentile(auc_list,2.5),6), round(np.percentile(auc_list,97.5),6)]
+    auc_boot = [round(np.percentile(auc_list,2.5),3), round(np.percentile(auc_list,97.5),3)]
     sensitivity_boot = [round(np.percentile(sens_list,2.5),3), round(np.percentile(sens_list,97.5),3)]
     specificity_boot = [round(np.percentile(spec_list,2.5),3), round(np.percentile(spec_list,97.5),3)]
     ppv_boot = [round(np.percentile(ppv_list,2.5),3), round(np.percentile(ppv_list,97.5),3)]
     npv_boot = [round(np.percentile(npv_list,2.5),3), round(np.percentile(npv_list,97.5),3)]
 
-    print('AUC is ' + str(round(auc_full,6)) + str() + ' ' + str(auc_boot))
+    print('AUC is ' + str(round(auc_full,3)) + str() + ' ' + str(auc_boot))
     print('Sensitivity is ' + str(round(sensitivity_full,3)) + ' ' + str(sensitivity_boot))
     print('Specificity is ' + str(round(specificity_full,3)) + ' ' + str(specificity_boot))
     print('PPV is ' + str(round(ppv_full,3)) + str() + ' ' + str(ppv_boot))
