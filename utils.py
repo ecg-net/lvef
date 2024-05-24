@@ -20,8 +20,7 @@ def sigmoid(x):
     y = 1/(1+math.exp(-1*x))
     return(y)
 
-
-def bootstrap(x,y, opt_threshold):
+def bootstrap(x,y):
     youden = 0.07800596181964313
     opt_threshold = youden
     y_total, yhat_total = x,y # y_total is ground truth, while yhat_total is prediction
@@ -89,7 +88,8 @@ def bootstrap(x,y, opt_threshold):
     print("npv:",round(npv_full,3),str(npv_boot))
     # print("Number of Positives" + str(num_positives))
 
-def bootstrap_reg_new(manifest, threshold):
+def bootstrap_reg_new(manifest):
+    threshold = 35
     tp = len(manifest[(manifest.EF_2D < threshold) & (manifest.EF_preds < threshold)])
     fp = len(manifest[(manifest.EF_2D >= threshold) & (manifest.EF_preds < threshold)])
     fn = len(manifest[(manifest.EF_2D < threshold) & (manifest.EF_preds >= threshold)])
