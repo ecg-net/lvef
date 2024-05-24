@@ -64,6 +64,7 @@ def bootstrap(x,y, opt_threshold):
     np.array(num_pos)
     
     fpr,tpr, _ = metrics.roc_curve(y_total, yhat_total)
+    auc_full = metrics.auc(fpr,tpr)
     tp = len(y_total[(y_total == 1) & (yhat_total > opt_threshold)])
     fp = len(y_total[(y_total == 0) & (yhat_total > opt_threshold)])
     tn = len(y_total[(y_total == 0) & (yhat_total < opt_threshold)])
@@ -73,7 +74,7 @@ def bootstrap(x,y, opt_threshold):
     ppv_full = (tp/(tp+fp))
     npv_full = (tn/(tn+fn))
 
-    auc_boot = [round(np.percentile(aucs,2.5),6), round(np.percentile(aucs,97.5),6)]
+    auc_boot = [round(np.percentile(aucs,2.5),3), round(np.percentile(aucs,97.5),3)]
     sensitivity_boot = [round(np.percentile(sensitivity,2.5),3), round(np.percentile(sensitivity,97.5),3)]
     specificity_boot = [round(np.percentile(specificity,2.5),3), round(np.percentile(specificity,97.5),3)]
     ppv_boot = [round(np.percentile(ppv,2.5),3), round(np.percentile(ppv,97.5),3)]
@@ -81,13 +82,58 @@ def bootstrap(x,y, opt_threshold):
     num_positives = [round(np.percentile(num_pos,2.5),3), round(np.percentile(num_pos,97.5),3)]
     
     
-    print("auc:" + str(auc_boot))
-    print("sensitivity:" + str(sensitivity_boot))
-    print("specificity:" + str(specificity_boot))
-    print("ppv:" + str(ppv_boot))
-    print("npv:" + str(npv_boot))
-    print("Number of Positives" + str(num_positives))
+    print("auc:",round(auc_full,3),str(auc_boot))
+    print("sensitivity:",round(sensitivity_full,3),str(sensitivity_boot))
+    print("specificity:", round(specificity_full,3), str(specificity_boot))
+    print("ppv:",round(ppv_full,3),str(ppv_boot))
+    print("npv:",round(npv_full,3),str(npv_boot))
+    # print("Number of Positives" + str(num_positives))
     return(auc_boot, ppv_boot)
+
+
+def bootstrap_reg_new(manifest, threshold):
+    tp = len(manifest[(manifest.EF_2D < threshold) & (manifest.EF_preds < threshold)])
+    fp = len(manifest[(manifest.EF_2D >= threshold) & (manifest.EF_preds < threshold)])
+    fn = len(manifest[(manifest.EF_2D < threshold) & (manifest.EF_preds >= threshold)])
+    tn = len(manifest[(manifest.EF_2D >= threshold) & (manifest.EF_preds >= threshold)])
+    ppv_full = tp/(tp+fp)
+    npv_full = tn/(fn+tn)
+    sensitivity_full = tp/(fn+tp)
+    specificity_full = tn/(tn+fp)
+    fpr,tpr,_ = metrics.roc_curve((manifest.EF_2D >= threshold)*1,manifest.EF_preds)
+    auc_full = metrics.auc(fpr,tpr)
+
+    auc_list = []
+    sens_list = []
+    spec_list = []
+    ppv_list = []
+    npv_list = []
+
+    for i in tqdm(range(0,10000)):
+        predictions = manifest.sample(frac = 0.5)
+        tp = len(predictions[(predictions.EF_2D < threshold) & (predictions.EF_preds < threshold)])
+        fp = len(predictions[(predictions.EF_2D >= threshold) & (predictions.EF_preds < threshold)])
+        fn = len(predictions[(predictions.EF_2D < threshold) & (predictions.EF_preds >= threshold)])
+        tn = len(predictions[(predictions.EF_2D >= threshold) & (predictions.EF_preds >= threshold)])
+        fpr,tpr,_ = metrics.roc_curve((predictions.EF_2D >= threshold)*1,predictions.EF_preds)
+        auc = metrics.auc(fpr,tpr)
+        auc_list.append(auc)
+        sens_list.append(tp/(tp+fn))
+        spec_list.append(tn/(tn+fp))
+        ppv_list.append(tp/(tp+fp))
+        npv_list.append(tn/(tn+fn))
+
+    auc_boot = [round(np.percentile(auc_list,2.5),6), round(np.percentile(auc_list,97.5),6)]
+    sensitivity_boot = [round(np.percentile(sens_list,2.5),3), round(np.percentile(sens_list,97.5),3)]
+    specificity_boot = [round(np.percentile(spec_list,2.5),3), round(np.percentile(spec_list,97.5),3)]
+    ppv_boot = [round(np.percentile(ppv_list,2.5),3), round(np.percentile(ppv_list,97.5),3)]
+    npv_boot = [round(np.percentile(npv_list,2.5),3), round(np.percentile(npv_list,97.5),3)]
+
+    print('AUC is ' + str(round(auc_full,6)) + str() + ' ' + str(auc_boot))
+    print('Sensitivity is ' + str(round(sensitivity_full,3)) + ' ' + str(sensitivity_boot))
+    print('Specificity is ' + str(round(specificity_full,3)) + ' ' + str(specificity_boot))
+    print('PPV is ' + str(round(ppv_full,3)) + str() + ' ' + str(ppv_boot))
+    print('NPV is ' + str(round(npv_full,3)) + str() + ' ' + str(npv_boot))
 
 class EffNet(nn.Module):
 
